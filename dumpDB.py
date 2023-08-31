@@ -128,10 +128,10 @@ def importDump(database_copiada, dbLocalhost):
 #--------------------------------Função principal--------------------------------#
 def main():
     #variaveis de conexão com o banco de dados
-    host_db     = "172.20.0.137"
+    host_db     = "000.00.0.000"
     port_db     = "3306"
-    user_db     = "Estagiario_TI"
-    passwd_db   = "nxzero"
+    user_db     = "root"
+    passwd_db   = "root"
 
     host_local  = "localhost"
     port_local  = "3307"            #3306
