@@ -1,7 +1,12 @@
+#imports
 import mysql.connector
 import os
 import subprocess
 import time
+
+#variaveis globais
+global tempo_total
+
 
 #----------------------Funções referentes aos dados de conexão----------------------#
 
@@ -23,10 +28,15 @@ def pegaDadosLocalhost():
 
 #--------------------------------Funções principais--------------------------------#
 def makeDump(host_db, port_db, user_db, passwd_db, database_copiada):
-    escolha = int(input("Deseja ignorar alguma tabela? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
+    global tempo_total
     tabela_ignorada = ""
+    trigger_ignorada = ""
+    rotinas = ""
     force = ""
+
+    # ============= faz verificações sobre o que o usuário deseja ignorar / incluir no dump =============
     
+    escolha = int(input("Deseja ignorar alguma tabela? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
     if escolha == 1:
         while True:
             tabela_ignorada += " --ignore-table=" + database_copiada + "." + input("Qual tabela você deseja ignorar? ")
@@ -34,93 +44,94 @@ def makeDump(host_db, port_db, user_db, passwd_db, database_copiada):
             if escolha == 0:
                 break
 
+    escolha = int(input("Deseja ignorar alguma trigger? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
+    if escolha == 1: trigger_ignorada = "--skip-triggers"
+
+    escolha = int(input("Deseja incluir as rotinas (Procedures e Functions) no dump? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
+    if escolha == 1: rotinas = "--routines"
+   
     #verifica se deseja executar o dump no modo force (ignora possiveis erros)
     if (int(input("Deseja executar no modo Force? (ATENÇÃO: o modo force, apesar de o mostrar ao usuário, ignora possiveis erros ocorridos ao gerar o dump. Pode ser util caso esteja enfrentando erros em apenas uma tabela especifica que não seja de tamanha importancia) \n| (1) -> Sim |   | (0) -> Não |\n-> ")) == 1):
          force = "--force"
     
-    dump = (f"mysqldump -h{host_db} -P{port_db} -u{user_db} -p{passwd_db} --extended-insert --single-transaction {force}  {database_copiada}{tabela_ignorada}")
+    dump = (f"mysqldump -h{host_db} -P{port_db} -u{user_db} -p{passwd_db} --extended-insert --single-transaction {force} {trigger_ignorada} {rotinas}  {database_copiada}{tabela_ignorada}")
+
+    # ==================== faz o dump do database ====================
 
     try:
-        subprocess.run(dump, stdout=open(f"{database_copiada}.sql", 'w'))
+        aux_time = time.time()
+        subprocess.run(dump, stdout=open(f"{database_copiada}.txt", 'w'))
+        tempo_total = (time.time() - aux_time)
+
     except subprocess.CalledProcessError as e:
         print("\n!-!-!-!-!-!-!-Erro ao realizar o dump-!-!-!-!-!-!-\n")
         print(e.output)
+        print("-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
         return False
+    
     else:
         #Verifica se na penultima linha do arquivo esta escrito "-- Dump completed on" para retornar verdadeiro ou falso
-        with open(f"{database_copiada}.sql", "r", encoding='ISO-8859-1') as file:
+        with open(f"{database_copiada}.txt", "r", encoding='ISO-8859-1') as file:
             lines = file.readlines()
             if "-- Dump completed on" in lines[-1]:
-                print("-=-=-=-=-=-=-Dump realizado com sucesso-=-=-=-=-=-=-")
+                print("-=-=-=-=-=-=-Arquivo dump gerado com sucesso-=-=-=-=-=-=-")
                 return True
             else:
-                print("\n!-!-!-!-!-!-!-Ocorreu um erro ao realizar o dump-!-!-!-!-!-!-\n")
+                print("\n!-!-!-!-!-!-!-Ocorreu um erro ao gerar o arquivo dump-!-!-!-!-!-!-\n")
                 return False
 
 
 
 def importDump(database_copiada, dbLocalhost):
-    
     cursor = dbLocalhost.cursor()
     cursor.execute(f"DROP DATABASE IF EXISTS {database_copiada}")
     cursor.execute(f"CREATE DATABASE {database_copiada}")
     cursor.execute(f"USE {database_copiada}")
     cursor.close()
 
-
     #caso o tamanho do arquivo seja maior que 50mb, vai dividindo por linhas
-    if os.path.getsize(f"{database_copiada}.sql") > 50000000:
+    if os.path.getsize(f"{database_copiada}.txt") > 50000000:
         print("Arquivo muito grande, dividindo por linhas...")
-        print("Aguarde.... provavelmente vai demorar bastante...")
 
-        arquivo = open(f"{database_copiada}.sql", "r", encoding='ISO-8859-1')
+        arquivo = open(f"{database_copiada}.txt", "r", encoding='ISO-8859-1')
         conteudo = arquivo.read()
         arquivo.close()
 
-        i = 0
-        comando = ""
         lista_comandos = []
+        lista_comandos = conteudo.split(";\n")
 
-        while i < len(conteudo):
-            while conteudo[i] != ";":
-                comando += conteudo[i]
-                i += 1
+        print("lista de comandos criada!\nIniciando inserções no banco de dados...\nAguarde...")
 
-            comando += ";"
-            i += 1
-
-            print(f"I = {i} -> {comando}")
-
-            lista_comandos.append(comando.replace("\n", ""))
-            comando = ""
-
-        print("lista de comandos criada!")
-
-        ("Inserindo comandos no banco de dados...")
-        for c in lista_comandos:
-            cursor = dbLocalhost.cursor()
-            cursor.execute(c)
+        cursor = dbLocalhost.cursor()
+        try:
+            for c in lista_comandos:
+                cursor.execute(c)
+        except Exception as e:
+            print("-!-!-!-Ocorreu um erro ao importar o dump, algumas partes podem estar incompletas-!-!-!-")
+            print(e)
+            print("-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+            pass
+        else:
+            print("-=-=-=-=-=-=-Importação realizada com sucesso-=-=-=-=-=-=-")
+        finally:
             cursor.close()
-    
+            dbLocalhost.commit()
+
+
     else:
         cursor = dbLocalhost.cursor()
         try:
-            with open(f"{database_copiada}.sql", "r", encoding='ISO-8859-1') as file:
+            with open(f"{database_copiada}.txt", "r", encoding='ISO-8859-1') as file:
                 cursor.execute(file.read(), multi=True)
         except Exception as e:
             cursor.execute(f"DROP DATABASE IF EXISTS {database_copiada}")
             print("-!-!-!-!-!-!-Erro ao importar o dump-!-!-!-!-!-!-")
             print(e)
             print("-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-        
             cursor.close()
-            #os.remove(f"{database_copiada}.sql")
         else:
             print("-=-=-=-=-=-=-Importação realizada com sucesso-=-=-=-=-=-=-")
-        
             cursor.close()
-            #os.remove(f"{database_copiada}.sql")
-    
 
 
 
@@ -154,6 +165,9 @@ def main():
 
 
     while True:
+        global tempo_total
+        tempo_total = 0
+
         database_copiada = input("Qual database você deseja copiar?\n")
 
         #faz a conexão com o localhost
@@ -164,25 +178,30 @@ def main():
             port    = port_local
         )
         
-        
         if(makeDump(host_db, port_db, user_db, passwd_db, database_copiada)):
-            
-            start_time = time.time()
-            
-            importDump(database_copiada, dbLocalhost)
-            
-            print("--- %s segundos ---" % (time.time() - start_time))
+            aux_time = time.time()
 
+            importDump(database_copiada, dbLocalhost)
+
+            tempo_total += (time.time() - aux_time)
+            print(f"Tempo total: {tempo_total} segundos")
+
+            os.remove(f"{database_copiada}.txt")
         else:
-            print()
-            #os.remove(f"{database_copiada}.sql")
+            os.remove(f"{database_copiada}.txt")
 
         escolha = int(input("Deseja copiar mais algum database? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
         if escolha == 0:
             break
 
-
     dbLocalhost.close()
-    # dbLocalhost.commit()
 
-main()
+# try:
+#     main()
+# except Exception as e:
+#     print("Ocorreu um erro inesperado")
+#     print(e)
+# finally:
+#     input("Pressione enter para sair...")
+
+main() 
