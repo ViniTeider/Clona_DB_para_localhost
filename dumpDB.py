@@ -4,6 +4,7 @@ import os
 import subprocess
 import time
 
+
 #variaveis globais
 global tempo_total
 
@@ -30,8 +31,6 @@ def pegaDadosLocalhost():
 def makeDump(host_db, port_db, user_db, passwd_db, database_copiada):
     global tempo_total
     tabela_ignorada = ""
-    trigger_ignorada = ""
-    rotinas = ""
     force = ""
 
     # ============= faz verificações sobre o que o usuário deseja ignorar / incluir no dump =============
@@ -43,18 +42,12 @@ def makeDump(host_db, port_db, user_db, passwd_db, database_copiada):
             escolha = int(input("Deseja ignorar mais alguma tabela? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
             if escolha == 0:
                 break
-
-    escolha = int(input("Deseja ignorar alguma trigger? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
-    if escolha == 1: trigger_ignorada = "--skip-triggers"
-
-    escolha = int(input("Deseja incluir as rotinas (Procedures e Functions) no dump? \n| (1) -> Sim |   | (0) -> Não |\n-> "))
-    if escolha == 1: rotinas = "--routines"
    
     #verifica se deseja executar o dump no modo force (ignora possiveis erros)
     if (int(input("Deseja executar no modo Force? (ATENÇÃO: o modo force, apesar de o mostrar ao usuário, ignora possiveis erros ocorridos ao gerar o dump. Pode ser util caso esteja enfrentando erros em apenas uma tabela especifica que não seja de tamanha importancia) \n| (1) -> Sim |   | (0) -> Não |\n-> ")) == 1):
          force = "--force"
     
-    dump = (f"mysqldump -h{host_db} -P{port_db} -u{user_db} -p{passwd_db} --extended-insert --single-transaction {force} {trigger_ignorada} {rotinas}  {database_copiada}{tabela_ignorada}")
+    dump = (f"mysqldump -h{host_db} -P{port_db} -u{user_db} -p{passwd_db} --extended-insert --single-transaction {force} {database_copiada}{tabela_ignorada}")
 
     # ==================== faz o dump do database ====================
 
@@ -107,9 +100,8 @@ def importDump(database_copiada, dbLocalhost):
             for c in lista_comandos:
                 cursor.execute(c)
         except Exception as e:
-            print("-!-!-!-Ocorreu um erro ao importar o dump, algumas partes podem estar incompletas-!-!-!-")
+            print("Ocorreu um erro ao importar o dump, algumas partes podem estar incompletas")
             print(e)
-            print("-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
             pass
         else:
             print("-=-=-=-=-=-=-Importação realizada com sucesso-=-=-=-=-=-=-")
@@ -139,10 +131,10 @@ def importDump(database_copiada, dbLocalhost):
 #--------------------------------Função principal--------------------------------#
 def main():
     #variaveis de conexão com o banco de dados
-    host_db     = "172.20.0.137"
+    host_db     = "000.00.0.000"
     port_db     = "3306"
-    user_db     = "Estagiario_TI"
-    passwd_db   = "nxzero"
+    user_db     = "root"
+    passwd_db   = "root"
 
     host_local  = "localhost"
     port_local  = "3307"            #3306
@@ -196,12 +188,12 @@ def main():
 
     dbLocalhost.close()
 
-# try:
-#     main()
-# except Exception as e:
-#     print("Ocorreu um erro inesperado")
-#     print(e)
-# finally:
-#     input("Pressione enter para sair...")
+try:
+    main()
+except Exception as e:
+    print("Ocorreu um erro inesperado")
+    print(e)
+finally:
+    input("Pressione enter para sair...")
 
-main() 
+#main() 
