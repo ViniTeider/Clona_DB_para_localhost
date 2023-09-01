@@ -188,6 +188,7 @@ def main():
 
     dbLocalhost.close()
 
+
 try:
     main()
 except Exception as e:
@@ -196,4 +197,3 @@ except Exception as e:
 finally:
     input("Pressione enter para sair...")
 
-#main() 
