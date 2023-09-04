@@ -18,6 +18,9 @@ def printError(string):
 def printSuccess(string):
     print("\033[1;32m" + string + "\033[0;0m")
 
+def printBlue(string):
+    print("\033[1;34m" + string + "\033[0;0m")
+
 #----------------------Funções referentes aos dados de conexão----------------------#
 
 def pegaDadosDb():
@@ -164,11 +167,17 @@ def main():
 
 
 
-    while True:
+
+
+
+    databases = []
+    databases = input("Insira o nome dos databases que você deseja copiar, separados por espaço: \n").split(" ")
+
+    for database_copiada in databases:
         global tempo_total
         tempo_total = 0
-
-        database_copiada = input("Qual database você deseja copiar?\n")
+        
+        printBlue(f"\n----------------------------------Copiando o database {database_copiada}----------------------------------\n")
 
         #faz a conexão com o localhost
         dbLocalhost = mysql.connector.connect(
@@ -184,15 +193,10 @@ def main():
             importDump(database_copiada, dbLocalhost)
 
             tempo_total += (time.time() - aux_time)
-            print(f"Tempo total: {tempo_total} segundos")
-
+            print(f"Tempo total para copiar o database {database_copiada}: {tempo_total:.2f} segundos")
             os.remove(f"{database_copiada}.txt")
         else:
             os.remove(f"{database_copiada}.txt")
-
-        escolha = int(input("Deseja copiar mais algum database? \n| (1) -> Sim |   | (0) -> Não | -> "))
-        if escolha == 0:
-            break
 
     dbLocalhost.close()
 
@@ -202,4 +206,5 @@ except Exception as e:
     printError("Ocorreu um erro inesperado")
     print(e)
 finally:
+    print("Execução finalizada")
     input("Pressione enter para sair...")
