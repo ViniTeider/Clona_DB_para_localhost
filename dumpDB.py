@@ -4,6 +4,7 @@ from alive_progress import alive_bar
 import os
 import subprocess
 import time
+from getpass import getpass
 
 
 #variaveis globais
@@ -24,7 +25,7 @@ def pegaDadosDb():
     host_db = input("Host: ")
     port_db = input("Porta: ")
     user_db = input("Usuário: ")
-    passwd_db = input("Senha: ")
+    passwd_db = getpass("Senha: ")
     return host_db, port_db, user_db, passwd_db, 
 
 def pegaDadosLocalhost():
@@ -32,7 +33,7 @@ def pegaDadosLocalhost():
     host_local = input("Host: ")
     port_local = input("Porta: ")
     user_local = input("Usuário: ")
-    passwd_local = input("Senha: ")
+    passwd_local = getpass("Senha: ")
     return host_local, port_local, user_local, passwd_local
 
 #--------------------------------Funções principais--------------------------------#
